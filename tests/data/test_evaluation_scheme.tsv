@@ -1,0 +1,2 @@
+eq_start	bool	(rna_chrom==dna_chrom)&(rna_start==dna_start)&(rna_end==dna_end)
+flipped_dna_start	int	np.where(dna_strand=="-", dna_end, dna_start)

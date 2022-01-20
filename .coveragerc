@@ -1,0 +1,12 @@
+[run]
+source=
+    rnadnatools/
+
+omit=
+    rnadnatools/__main__.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    return NotImplemented
+    raise NotImplementedError

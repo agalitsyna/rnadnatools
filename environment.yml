@@ -1,0 +1,12 @@
+name: rnadnatools
+channels:
+  - anaconda
+  - bioconda
+dependencies:
+  - pandas
+  - click
+  - numpy
+  - h5py
+  - biopython
+  - pip:
+    - pyarrow
