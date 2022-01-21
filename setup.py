@@ -41,6 +41,7 @@ setup(
     author="agalicina",
     license="MIT",
     py_modules=["rnadnatools"],
+    packages=['rnadnatools'],
     setup_requires=setup_requires,
     install_requires=install_requires,
     entry_points={
