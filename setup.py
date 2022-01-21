@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 import re
 import os
 import io
@@ -41,7 +41,7 @@ setup(
     author="agalicina",
     license="MIT",
     py_modules=["rnadnatools"],
-    packages=['rnadnatools'],
+    packages=find_packages(),
     setup_requires=setup_requires,
     install_requires=install_requires,
     entry_points={
