@@ -67,7 +67,7 @@ def renzymes_recsites(
     rsites.loc[idx_neg, "start"] = rsites.loc[idx_neg, "site"] + enzyme.fst3 - 1
 
     rsites.loc[:, "end"] = rsites.start.astype(int)
-    rsites.loc[:, "name"] = [f"{enzyme_name}_{idx+1}" for idx in rsites.index]
+    rsites.loc[:, "name"] = [f"{restriction_enzyme}_{idx+1}" for idx in rsites.index]
     rsites.loc[:, "foo"] = "."
 
     rsites.to_csv(
