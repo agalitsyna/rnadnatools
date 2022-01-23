@@ -115,7 +115,7 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
                                         vars()[node.id] = table.loc[:, node.id]
                                         is_found = True
                                 if is_found:
-                                    loaded_ids.append(str(node.id))
+                                    loaded_ids.append(str(node.id)); print(np.bincount(vars()[node.id]), str(node.id))
                                     break
 
                             if not is_found:
@@ -133,7 +133,7 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
 
             # Evaluate expression:
             logger.debug(f"Evaluating column: {column_name}, expression: {column_expression} ")
-            result = eval(column_expression)
+            result = eval(column_expression); print(result[:10], column_expression)
 
             # Remove unused variables:
             for v in loaded_ids:

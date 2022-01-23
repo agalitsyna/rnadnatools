@@ -132,7 +132,7 @@ def extract_fastq(
         starts = vars()[key_start]
         ends = vars()[key_end]
         for i in selected:
-            outf.write(readIDs[i] + "\n")  # Sequence name
+            outf.write("@" + readIDs[i] + "\n")  # Sequence name
             outf.write(seqs[i][starts[i]: ends[i]] + "\n")  # Sequence
             outf.write("+\n")
             outf.write(quals[i][starts[i]: ends[i]] + "\n")  # Qualities
