@@ -80,6 +80,12 @@ import numpy as np
     type=int,
     show_default=True,
 )
+# @click.option('--fastq-table-header/--no-fastq-table-header',
+#               help="Flag for the header in fastq table.",
+#               default=True)
+# @click.option('--position-table-header/--no-position-table-header',
+#               help="Flag for the header in position table.",
+#               default=True)
 def check_nucleotides(
     input_fastq_table,
     input_position_table,
@@ -92,6 +98,8 @@ def check_nucleotides(
     position_colname,
     position_column,
     shift,
+    # fastq_table_header,
+    # position_table_header
 ):
     """
     Check that certain positions in the reads have the requested sequence. Take positions from POSITION_TABLE and sequences from FASTQ_TABLE.
@@ -106,7 +114,7 @@ def check_nucleotides(
     `rnadnatools read check-nucleotides --oligo GA -o tmp.txt --readid-colname readID --seq-colname R1 --position-colname start_hit__bridge_forward_R1 --shift 35 tests/data/test-sample.table.tsv tests/data/test-sample.oligos.tsv`
     """
 
-    # Checks of inpu parameters:
+    # Checks the input parameters:
     if (readid_colname is None) and (readid_column is None):
         raise ValueError("Please, provide either --readid-colname or --readid-column.")
     if (readid_colname is not None) and (readid_column is not None):
