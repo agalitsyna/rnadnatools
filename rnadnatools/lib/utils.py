@@ -21,8 +21,12 @@ def load_tables(in_paths, in_format):
         elif in_format.upper() == "HDF5":
             input_tables.append(h5py.File(input_table, "r"))
         elif in_format.upper() == "TSV":
+            logger.warning("Loading multiple TSV tables into memory, "
+                        "might result in RAM overload!")
             input_tables.append(pd.read_csv(input_table, sep="\t"))
         elif in_format.upper() == "CSV":
+            logger.warning("Loading multiple CSV tables into memory, "
+                        "might result in RAM overload!")
             input_tables.append(pd.read_csv(input_table, sep=","))
         else:
             raise ValueError(

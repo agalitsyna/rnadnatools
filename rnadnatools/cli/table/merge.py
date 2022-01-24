@@ -67,9 +67,10 @@ def merge(output_file, in_paths, in_format, out_format, col_modifiers):
         col_modifiers = col_modifiers.strip().split(',')
         assert len(in_paths)==len(col_modifiers), "Please, provide the modifiers for all input tables"
 
-    input_tables = utils.load_tables(in_paths, in_format)
-
     if in_format.upper()=="PARQUET" and out_format.upper()=="PARQUET":
+
+        input_tables = utils.load_tables(in_paths, in_format)
+
         columns = []
         schema = []
         for i, table in enumerate(input_tables):
@@ -83,5 +84,8 @@ def merge(output_file, in_paths, in_format, out_format, col_modifiers):
         parquet_writer = pq.ParquetWriter(output_file, parquet_schema, compression="snappy")
         parquet_writer.write_table(pq_merged)
         parquet_writer.close()
+
+    else:
+        raise NotImplementedError(f"in_format {in_format} and out_format {out_format} are not supported yet.")
 
     return 0

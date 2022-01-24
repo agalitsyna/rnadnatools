@@ -100,7 +100,6 @@ import numpy as np
 @click.option('--drop-key/--no-drop-key',
               help="Flag for dropping the key column of table when writing to output.",
               default=True)
-
 # @click.option(
 #     '-c',
 #     "--chunksize",

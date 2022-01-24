@@ -39,7 +39,6 @@ import pandas as pd
     required=True,
 )
 @click.option(
-    '-c',
     "--chunksize",
     help="Chunksize for tables loading. Supported for TSV/CSV and HDF5 input for now.",
     default=1_000_000,
@@ -54,7 +53,12 @@ import pandas as pd
     default=None,
     required=False
 )
-def convert(input_file, output_file, in_format, out_format, chunksize, col_modifier):
+def convert(input_file,
+            output_file,
+            in_format,
+            out_format,
+            chunksize,
+            col_modifier):
     """
     Convert tables between formats, optionally modifying column names in the tables
     """
@@ -69,10 +73,8 @@ def convert(input_file, output_file, in_format, out_format, chunksize, col_modif
         # Read:
         df = pd.read_parquet(input_file)
         # Write:
-        if  out_format.upper()=="CSV":
-            df.to_csv(output_file)
-        elif out_format.upper()=="TSV":
-            df.to_csv(output_file, sep='\t')
+        if  out_format.upper()=="CSV" or out_format.upper()=="TSV":
+            df.to_csv(output_file, sep="\t" if out_format.upper() == "TSV" else ',')
         elif out_format.upper()=="HDF5":
             output_file = h5py.File(output_file, 'a')
             for column_name, result in df.to_dict(orient='list').items():
@@ -82,15 +84,11 @@ def convert(input_file, output_file, in_format, out_format, chunksize, col_modif
 
     # Write HDF5, no chunking for now:
     if out_format.upper()=='HDF5' or in_format.upper()=="HDF5":
-        logger.warn("Writing HDF5 for conversion, no chunking!")
+        logger.warn("Reading or writing HDF5 for conversion, no chunking!")
 
         # Read:
-        if in_format.upper() == "TSV":
-            df = pd.read_csv(input_file, sep="\t", index=False)
-            dct = df.to_dict(orient='list')
-            del df
-        elif in_format.upper() == "CSV":
-            df = pd.read_csv(input_file, sep=",", index=False)
+        if in_format.upper() == "TSV" or in_format.upper() == "CSV":
+            df = pd.read_csv(input_file, sep="\t" if in_format.upper() == "TSV" else ',', index=False)
             dct = df.to_dict(orient='list')
             del df
         elif in_format.upper() == 'HDF5':
@@ -104,19 +102,14 @@ def convert(input_file, output_file, in_format, out_format, chunksize, col_modif
             for column_name, result in dct.items():
                 output_file.create_dataset(column_name, data=result)
             output_file.close()
-        elif out_format.upper()=="CSV":
+        elif out_format.upper()=="CSV" or out_format.upper() == "TSV":
             df = pd.DataFrame(dct)
-            df.to_csv(output_file, sep=',', index=False)
-        elif out_format.upper() == "TSV":
-            df = pd.DataFrame(dct)
-            df.to_csv(output_file, sep='\t', index=False)
+            df.to_csv(output_file, sep="\t" if out_format.upper() == "TSV" else ',', index=False)
         return 0
 
     # Read other formats:
-    if in_format.upper()=="TSV":
-        instream = pd.read_csv(input_file, sep="\t", chunksize=chunksize, low_memory=True)
-    elif in_format.upper()=="CSV":
-        instream = pd.read_csv(input_file, sep=",", chunksize=chunksize, low_memory=True)
+    if in_format.upper()=="TSV" or in_format.upper()=="CSV":
+        instream = pd.read_csv(input_file, sep="\t" if in_format.upper() == "TSV" else ',', chunksize=chunksize, low_memory=True)
 
     if out_format.upper()=="PARQUET":
         for i, chunk in enumerate(instream):
@@ -135,15 +128,11 @@ def convert(input_file, output_file, in_format, out_format, chunksize, col_modif
 
         parquet_writer.close()
 
-    elif out_format.upper()=="CSV":
+    elif out_format.upper()=="CSV" or out_format.upper()=="TSV":
         header = True
-        for chunk in instream:
-            chunk.to_csv(output_file, sep=',', header=header, mode='a', index=False)
-            header = False
-    elif out_format.upper()=="TSV":
-        header = True
-        for chunk in instream:
-            chunk.to_csv(output_file, sep='\t', header=header, mode='a', index=False)
+        for i, chunk in enumerate(instream):
+            chunk.to_csv(output_file, sep="\t" if out_format.upper() == "TSV" else ',',
+                         header=header, mode='a' if i!=0 else 'w', index=False)
             header = False
 
     return 0
