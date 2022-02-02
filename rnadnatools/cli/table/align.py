@@ -209,6 +209,7 @@ def align(input_file,
         new_colnames = df.columns
 
     dct_updated = {}
+    print(df.columns, new_colnames, fill_values)
     for k, k_new, v in zip(df.columns, new_colnames, fill_values):
         if k==key_column:
             if not drop_key:

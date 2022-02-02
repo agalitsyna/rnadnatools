@@ -13,6 +13,7 @@ from ...lib import utils
 
 # Parse the expressions:
 import ast
+import builtins
 
 # Loading the data:
 import pyarrow as pa
@@ -84,13 +85,14 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
             for node in ast.walk(syntax_tree):
                 if type(node) is ast.Name:
                     # The element is not loaded yet and is not a builtin name:
-                    if (node.id not in list(vars().keys())) and (
-                        node.id not in dir(__builtins__)
-                    ):
+                    if not ( (node.id in list(vars().keys())) or (node.id in dir(builtins)) ):
                         # Element is already loaded:
                         if node.id in loaded_arrays.keys():
                             if in_format.upper() == "PARQUET":
-                                vars()[node.id] = loaded_arrays[node.id].to_numpy()
+                                if loaded_arrays[node.id].type == pa.bool_():
+                                    vars()[node.id] = loaded_arrays[node.id].to_numpy(zero_copy_only=False)
+                                else:
+                                    vars()[node.id] = loaded_arrays[node.id].to_numpy()
                             elif in_format.upper() == "HDF5":
                                 vars()[node.id] = loaded_arrays[node.id][()]
                             else:

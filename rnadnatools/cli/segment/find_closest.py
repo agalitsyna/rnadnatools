@@ -41,7 +41,11 @@ import pandas as pd
 @click.option(
     "-c",
     "--columns",
-    help="Name of columns. Should be in the default order (start then end; left-side then right). Optional. ",
+    help="Name of columns with sites positions for reporting in the output. "
+         "Should be in the default order: "
+         "start of left closeest site, end of left closest, "
+         "start of right closest, end of right closest. "
+         "Optional. ",
     default="id,start_left,start_right,end_left,end_right",
     type=str,
     show_default=True,
@@ -54,10 +58,20 @@ import pandas as pd
     show_default=True,
 )
 def get_closest_sites(
-    filename_bed, filename_rsites, strand, align_ids, columns, out, out_format
+    filename_bed,
+    filename_rsites,
+    strand,
+    align_ids,
+    columns,
+    out,
+    out_format
 ):
     """
     Get distances to the closest sites to the start and end of mapped reads.
+    Input:
+     1) BED file with 7 columns: ["chrom", "start", "end", "read_id", "q", "strand", "cigar"]
+     2) table with restriction sites (or any other genome annotation) with no header,
+        with the columns: ["chrom", "start", "end", "name", "_", "strand"]
     Output file format: tsv file with fields:
     read id,
     distance to the closest site (strand-specific) to the read start from the left,
@@ -65,15 +79,11 @@ def get_closest_sites(
     distance to the closest site to the read end from the left,
     distance to the closest site to the read end from the right.
     If the read is located before the first site or after the last site in the chromosome,
-    then the reported distance will be artificially large (>> 1e9).
+    then the reported distance is artificially large (1e10).
     """
 
     # Read the restriction sites:
-    try:
-        rsites = pd.read_csv(filename_rsites, header=None, sep="\t")
-    except pd.errors.EmptyDataError:
-        rsites = pd.DataFrame(columns=np.arange(6))
-
+    rsites = pd.read_csv(filename_rsites, header=None, sep="\t")
     rsites.columns = ["chrom", "start", "end", "name", "_", "strand"]
     if strand != "b":
         rsites = rsites.loc[rsites.strand == strand, :].sort_values(["chrom", "start"])
