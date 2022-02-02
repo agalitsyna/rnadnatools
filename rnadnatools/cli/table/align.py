@@ -187,13 +187,14 @@ def align(input_file,
 
     if ref_colname is None:
         ref_colname = df_ref.columns[ref_column]
-    aln_ids = df_ref[ref_colname].values.astype(str)
+    ref_ids = df_ref[ref_colname].values.astype(str)
     del df_ref
 
-    df_ref = pd.DataFrame({"id": aln_ids}).reset_index().set_index("id")
-    l = len(df_ref)
+    df_ref = pd.DataFrame({"id": ref_ids}).reset_index().set_index("id")
+    l_ref = len(df_ref)
 
     # Match input and reference:
+    ids = [x for x in ids if x in ref_ids]
     ids_order = df_ref.loc[ids, "index"]  # TODO: optimize
 
     # Create the list of default values:
@@ -213,13 +214,14 @@ def align(input_file,
     for k, k_new, v in zip(df.columns, new_colnames, fill_values):
         if k==key_column:
             if not drop_key:
-                dct_updated[k_new] = aln_ids
+                dct_updated[k_new] = ref_ids
             else:
                 continue
         # Filling in the whole column including the missing values:
-        dct_updated[k_new] = np.full(l, v, dtype=df.dtypes[k])
+        dct_updated[k_new] = np.full(l_ref, v, dtype=df.dtypes[k])
         # Update only the values present in input table:
-        dct_updated[k_new][ids_order] = df.loc[:, k].values
+        df = df.set_index(key_colname)
+        dct_updated[k_new][ids_order] = df.loc[ids, k].values
 
     del df
 
@@ -231,12 +233,10 @@ def align(input_file,
         output_file.close()
 
     elif out_format.upper()=="CSV":
-        df = pd.DataFrame( dct_updated )
-        df.to_csv(output_file, sep=',', index=False)
+        pd.DataFrame( dct_updated ).to_csv(output_file, sep=',', index=False)
 
     elif out_format.upper() == "TSV":
-        df = pd.DataFrame( dct_updated )
-        df.to_csv(output_file, sep='\t', index=False)
+        pd.DataFrame( dct_updated ).to_csv(output_file, sep='\t', index=False)
 
     elif out_format.upper() == "PARQUET":
         pd.DataFrame( dct_updated ).to_parquet(output_file, compression='snappy')
