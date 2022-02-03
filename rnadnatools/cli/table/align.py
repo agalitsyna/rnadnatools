@@ -109,20 +109,20 @@ import numpy as np
 #     show_default=True,
 # )
 def align(input_file,
-            reference_file,
-            output_file,
-            key_column,
-            key_colname,
-            ref_column,
-            ref_colname,
-            fill_values,
-            in_format,
-            ref_format,
-            out_format,
-            new_colnames,
-            input_header,
-            ref_header,
-            drop_key
+    reference_file,
+    output_file,
+    key_column,
+    key_colname,
+    ref_column,
+    ref_colname,
+    fill_values,
+    in_format,
+    ref_format,
+    out_format,
+    new_colnames,
+    input_header,
+    ref_header,
+    drop_key
 ):
     """
     Align the INPUT_TABLE by the key-column to the REFERENCE_TABLE by the ref-column.
@@ -141,14 +141,11 @@ def align(input_file,
     if (ref_colname is not None) and (ref_column is not None):
         raise ValueError("--ref-colname and --ref-column cannot work together.")
 
-    # Read input:
+    # Define headers reading mode for TSV/CSV input and reference:
+    input_header = 0 if input_header else None
+    ref_header   = 0 if ref_header else None
 
-    # Will be used for TSV/CSV only:
-    if input_header:
-        input_header = 0
-    else:
-        input_header = None
-
+    # Read input file:
     if in_format.upper()=='PARQUET':
         df = pd.read_parquet(input_file)
     elif in_format.upper()=='TSV':
@@ -156,23 +153,15 @@ def align(input_file,
     elif in_format.upper()=='CSV':
         df = pd.read_csv(input_file, sep=",", header=input_header)
     elif in_format.upper() == 'HDF5':
-            h = h5py.File(input_file, 'r')
-            dct = {k:h[k][()] for k in h.keys()}
-            h.close()
-            df = pd.DataFrame.from_dict(dct)
+        h = h5py.File(input_file, 'r')
+        dct = {k:h[k][()] for k in h.keys()}
+        h.close()
+        df = pd.DataFrame.from_dict(dct)
 
     if key_colname is None:
         key_colname = df.columns[key_column]
-    ids = df.loc[:, key_colname].values.astype(str)
 
     # Read reference:
-
-    # Will be used for TSV/CSV only:
-    if ref_header:
-        ref_header = 0
-    else:
-        ref_header = None
-
     if ref_format.upper() == 'PARQUET':
         df_ref = pd.read_parquet(reference_file)
     elif ref_format.upper() == 'TSV':
@@ -187,42 +176,45 @@ def align(input_file,
 
     if ref_colname is None:
         ref_colname = df_ref.columns[ref_column]
+
+    ids = df.loc[:, key_colname].values.astype(str)
     ref_ids = df_ref[ref_colname].values.astype(str)
     del df_ref
 
-    df_ref = pd.DataFrame({"id": ref_ids}).reset_index().set_index("id")
-    l_ref = len(df_ref)
+    # List of reference values:
+    ref = pd.DataFrame({"id": ref_ids}).reset_index().set_index("id")
+    l_ref = len(ref_ids)
 
-    # Match input and reference:
+    # Match input and reference values:
     ids = [x for x in ids if x in ref_ids]
-    ids_order = df_ref.loc[ids, "index"]  # TODO: optimize
+    ids_order = ref.loc[ids, "index"]
 
     # Create the list of default values:
     fill_values = fill_values.split(',')
     if len(fill_values)==1:
-        fill_values = fill_values * (len(df.columns)-1)
+        fill_values = fill_values * len(df.columns)
+    else:
+        assert len(fill_values)==len(df.columns), "Provide the values for each column of input table."
 
     # Create the dictionary with the final values:
     if new_colnames is not None:
         new_colnames = new_colnames.split(',')
-        assert len(new_colnames)==len(df.columns), "Please, provide the column names equal to input table."
+        assert len(new_colnames)==len(df.columns), "Provide the column names equal to input table."
     else:
         new_colnames = df.columns
 
     dct_updated = {}
-    print(df.columns, new_colnames, fill_values)
-    for k, k_new, v in zip(df.columns, new_colnames, fill_values):
+    all_columns = df.columns
+    df = df.set_index(key_colname)
+    for k, k_new, v in zip(all_columns, new_colnames, fill_values):
         if k==key_column:
             if not drop_key:
                 dct_updated[k_new] = ref_ids
-            else:
-                continue
-        # Filling in the whole column including the missing values:
+            continue
+        # Fill in the whole column including the missing values:
         dct_updated[k_new] = np.full(l_ref, v, dtype=df.dtypes[k])
         # Update only the values present in input table:
-        df = df.set_index(key_colname)
         dct_updated[k_new][ids_order] = df.loc[ids, k].values
-
     del df
 
     # Write output:
