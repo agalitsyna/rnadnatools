@@ -53,7 +53,7 @@ import pandas as pd
 @click.option(
     '-m',
     "--col-modifiers",
-    help='Comma-separated modifiers for column names (input for python formatting), for example: "{colname}__test,{colname}__another". Optional.',
+    help='Comma-separated modifiers for column names (input for python formatting), for example: "{col_name}__test,{col_name}__another". Optional.',
     type=str,
     default=None,
     required=False

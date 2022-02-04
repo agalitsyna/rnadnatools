@@ -160,7 +160,7 @@ def check_nucleotides(
 
     # Read the tables, check oligonucleotides and write output:
     with open(output_file, "w") as outf:
-        outf.write(f"#entry_index\toligo_{oligo}_at_{shift}\n")
+        outf.write(f"#entry_index_{oligo}\toligo_{oligo}_at_{shift}\n")
         with open(input_fastq_table, "r") as in_f:
             with open(input_ref_table, "r") as hits_f:
                 fastq_table_line = in_f.readline()
