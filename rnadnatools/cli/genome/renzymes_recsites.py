@@ -8,6 +8,7 @@ from .. import get_logger
 logger = get_logger(__name__)
 
 from . import genome
+
 # from ...lib import *
 
 import numpy as np
@@ -21,11 +22,7 @@ from Bio.SeqIO import parse
 @click.argument("genome_path", type=click.Path(exists=True))
 @click.argument("restriction_enzyme", type=str)
 @click.argument("output_path", type=click.Path(exists=False))
-def renzymes_recsites(
-        genome_path,
-        restriction_enzyme,
-        output_path
-):
+def renzymes_recsites(genome_path, restriction_enzyme, output_path):
     """
     Detect recognition sites of restriction enzymes (start, end) and report strand
     This is not the same as restriction sites, see http://biopython.org/DIST/docs/cookbook/Restriction.html#mozTocId447698
@@ -52,13 +49,11 @@ def renzymes_recsites(
 
     rsites = pd.concat(rsites).sort_values(["chrom", "site"]).reset_index(drop=True)
 
-
     def detect_recognition_start(row):
         if row.strand == "+":
             return row.site - enzyme.fst5 - 1
         else:
             return row.site + enzyme.fst3 - 1
-
 
     # Retrieving actual position of recognition site
     idx_pos = rsites.strand == "+"

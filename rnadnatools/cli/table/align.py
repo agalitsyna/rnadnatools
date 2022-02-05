@@ -20,15 +20,11 @@ import numpy as np
 
 # Read the arguments:
 @table.command()
-@click.argument("input_file",
-                metavar="INPUT_FILE",
-                type=click.Path(exists=True))
-@click.argument("reference_file",
-                metavar="REFERENCE_FILE",
-                type=click.Path(exists=True))
-@click.argument("output_file",
-                metavar="OUTPUT_FILE",
-                type=click.Path(exists=False))
+@click.argument("input_file", metavar="INPUT_FILE", type=click.Path(exists=True))
+@click.argument(
+    "reference_file", metavar="REFERENCE_FILE", type=click.Path(exists=True)
+)
+@click.argument("output_file", metavar="OUTPUT_FILE", type=click.Path(exists=False))
 @click.option(
     "--key-colname",
     help="ID of the key column in input_file.",
@@ -60,49 +56,55 @@ import numpy as np
 @click.option(
     "--fill-values",
     help="Single value or comma-separated list to fill in the missing values "
-         "(for the key column as well to keep the shape consistent with table columns). ",
+    "(for the key column as well to keep the shape consistent with table columns). ",
     type=str,
-    required=True
+    required=True,
 )
 @click.option(
-    '-i',
+    "-i",
     "--in-format",
     help="Type of input.",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
     required=False,
-    default="auto"
+    default="auto",
 )
 @click.option(
-    '-r',
+    "-r",
     "--ref-format",
     help="Type of reference_file.",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
     required=False,
-    default="auto"
+    default="auto",
 )
 @click.option(
-    '-o',
+    "-o",
     "--out-format",
     help="Type of output_file. Same as input for 'auto'",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "auto"], case_sensitive=False),
     required=False,
-    default='auto'
+    default="auto",
 )
 @click.option(
     "--new-colnames",
     help="New column names for output table (comma-separated).",
     type=str,
-    required=False
+    required=False,
 )
-@click.option('--input-header/--no-input-header',
-              help="Flag for the header in input table. Used for TSV/CSV input.",
-              default=True)
-@click.option('--ref-header/--no-ref-header',
-              help="Flag for the header in reference table. Used for TSV/CSV input.",
-              default=True)
-@click.option('--drop-key/--no-drop-key',
-              help="Flag for dropping the key column of table when writing to output.",
-              default=True)
+@click.option(
+    "--input-header/--no-input-header",
+    help="Flag for the header in input table. Used for TSV/CSV input.",
+    default=True,
+)
+@click.option(
+    "--ref-header/--no-ref-header",
+    help="Flag for the header in reference table. Used for TSV/CSV input.",
+    default=True,
+)
+@click.option(
+    "--drop-key/--no-drop-key",
+    help="Flag for dropping the key column of table when writing to output.",
+    default=True,
+)
 # @click.option(
 #     '-c',
 #     "--chunksize",
@@ -111,7 +113,8 @@ import numpy as np
 #     type=int,
 #     show_default=True,
 # )
-def align(input_file,
+def align(
+    input_file,
     reference_file,
     output_file,
     key_column,
@@ -125,7 +128,7 @@ def align(input_file,
     new_colnames,
     input_header,
     ref_header,
-    drop_key
+    drop_key,
 ):
     """
     Align the INPUT_TABLE by the key-column to the REFERENCE_TABLE by the ref-column.
@@ -146,26 +149,26 @@ def align(input_file,
 
     # Define headers reading mode for TSV/CSV input and reference:
     input_header = 0 if input_header else None
-    ref_header   = 0 if ref_header else None
+    ref_header = 0 if ref_header else None
 
     # Guess format if not specified:
-    if in_format.upper()=='AUTO':
+    if in_format.upper() == "AUTO":
         in_format = utils.guess_format(input_file)
-    if ref_format.upper()=='AUTO':
+    if ref_format.upper() == "AUTO":
         ref_format = utils.guess_format(reference_file)
-    if out_format.upper()=='AUTO':
+    if out_format.upper() == "AUTO":
         out_format = in_format
 
     # Read input file:
-    if in_format.upper()=='PARQUET':
+    if in_format.upper() == "PARQUET":
         df = pd.read_parquet(input_file)
-    elif in_format.upper()=='TSV':
+    elif in_format.upper() == "TSV":
         df = pd.read_csv(input_file, sep="\t", header=input_header)
-    elif in_format.upper()=='CSV':
+    elif in_format.upper() == "CSV":
         df = pd.read_csv(input_file, sep=",", header=input_header)
-    elif in_format.upper() == 'HDF5':
-        h = h5py.File(input_file, 'r')
-        dct = {k:h[k][()] for k in h.keys()}
+    elif in_format.upper() == "HDF5":
+        h = h5py.File(input_file, "r")
+        dct = {k: h[k][()] for k in h.keys()}
         h.close()
         df = pd.DataFrame.from_dict(dct)
 
@@ -173,14 +176,14 @@ def align(input_file,
         key_colname = df.columns[key_column]
 
     # Read reference:
-    if ref_format.upper() == 'PARQUET':
+    if ref_format.upper() == "PARQUET":
         df_ref = pd.read_parquet(reference_file)
-    elif ref_format.upper() == 'TSV':
+    elif ref_format.upper() == "TSV":
         df_ref = pd.read_csv(reference_file, sep="\t", header=ref_header)
-    elif ref_format.upper() == 'CSV':
+    elif ref_format.upper() == "CSV":
         df_ref = pd.read_csv(reference_file, sep=",", header=ref_header)
-    elif ref_format.upper() == 'HDF5':
-        h = h5py.File(reference_file, 'r')
+    elif ref_format.upper() == "HDF5":
+        h = h5py.File(reference_file, "r")
         dct = {k: h[k][()] for k in h.keys()}
         h.close()
         df_ref = pd.DataFrame.from_dict(dct)
@@ -201,16 +204,20 @@ def align(input_file,
     ids_order = ref.loc[ids, "index"]
 
     # Create the list of default values:
-    fill_values = fill_values.split(',')
-    if len(fill_values)==1:
+    fill_values = fill_values.split(",")
+    if len(fill_values) == 1:
         fill_values = fill_values * len(df.columns)
     else:
-        assert len(fill_values)==len(df.columns), "Provide the values for each column of input table."
+        assert len(fill_values) == len(
+            df.columns
+        ), "Provide the values for each column of input table."
 
     # Create the dictionary with the final values:
     if new_colnames is not None:
-        new_colnames = new_colnames.split(',')
-        assert len(new_colnames)==len(df.columns), "Provide the column names equal to input table."
+        new_colnames = new_colnames.split(",")
+        assert len(new_colnames) == len(
+            df.columns
+        ), "Provide the column names equal to input table."
     else:
         new_colnames = df.columns
 
@@ -218,7 +225,7 @@ def align(input_file,
     all_columns = df.columns
     df = df.set_index(key_colname)
     for k, k_new, v in zip(all_columns, new_colnames, fill_values):
-        if k==key_column:
+        if k == key_column:
             if not drop_key:
                 dct_updated[k_new] = ref_ids
             continue
@@ -229,19 +236,19 @@ def align(input_file,
     del df
 
     # Write output:
-    if out_format.upper() == 'HDF5':
-        output_file = h5py.File(output_file, 'a')
+    if out_format.upper() == "HDF5":
+        output_file = h5py.File(output_file, "a")
         for column_name, result in dct_updated.items():
             output_file.create_dataset(column_name, data=result)
         output_file.close()
 
-    elif out_format.upper()=="CSV":
-        pd.DataFrame( dct_updated ).to_csv(output_file, sep=',', index=False)
+    elif out_format.upper() == "CSV":
+        pd.DataFrame(dct_updated).to_csv(output_file, sep=",", index=False)
 
     elif out_format.upper() == "TSV":
-        pd.DataFrame( dct_updated ).to_csv(output_file, sep='\t', index=False)
+        pd.DataFrame(dct_updated).to_csv(output_file, sep="\t", index=False)
 
     elif out_format.upper() == "PARQUET":
-        pd.DataFrame( dct_updated ).to_parquet(output_file, compression='snappy')
+        pd.DataFrame(dct_updated).to_parquet(output_file, compression="snappy")
 
     return 0

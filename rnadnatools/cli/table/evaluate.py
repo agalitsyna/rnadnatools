@@ -27,20 +27,20 @@ import pandas as pd
 @click.argument("output_file", type=click.Path(exists=False))
 @click.argument("in_paths", nargs=-1, type=click.Path(exists=True))
 @click.option(
-    '-i',
+    "-i",
     "--in-format",
     help="Type of input.",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
     required=False,
-    default="auto"
+    default="auto",
 )
 @click.option(
-    '-o',
+    "-o",
     "--out-format",
     help="Type of output_file. Same as input for 'auto'",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
     required=False,
-    default='auto'
+    default="auto",
 )
 def evaluate(column_schema, output_file, in_paths, in_format, out_format):
     """Create new columns according to the input expression.
@@ -62,9 +62,9 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
     prohibited_symbols = [":", ".", "-", "/", "!", "?", "&", "|", "'", "%", "@"]
 
     # Guess format if not specified:
-    if in_format.upper()=='AUTO':
+    if in_format.upper() == "AUTO":
         in_format = utils.guess_format(in_paths[0])
-    if out_format.upper()=='AUTO':
+    if out_format.upper() == "AUTO":
         out_format = in_format
 
     input_tables = utils.load_tables(in_paths, in_format)
@@ -91,12 +91,16 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
             for node in ast.walk(syntax_tree):
                 if type(node) is ast.Name:
                     # The element is not loaded yet and is not a builtin name:
-                    if not ( (node.id in list(vars().keys())) or (node.id in dir(builtins)) ):
+                    if not (
+                        (node.id in list(vars().keys())) or (node.id in dir(builtins))
+                    ):
                         # Element is already loaded:
                         if node.id in loaded_arrays.keys():
                             if in_format.upper() == "PARQUET":
                                 if loaded_arrays[node.id].type == pa.bool_():
-                                    vars()[node.id] = loaded_arrays[node.id].to_numpy(zero_copy_only=False)
+                                    vars()[node.id] = loaded_arrays[node.id].to_numpy(
+                                        zero_copy_only=False
+                                    )
                                 else:
                                     vars()[node.id] = loaded_arrays[node.id].to_numpy()
                             elif in_format.upper() == "HDF5":
@@ -128,19 +132,27 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
 
                             if not is_found:
                                 if in_format.upper() == "PARQUET":
-                                    avail_colnames = [list(table.column_names) for table in input_tables] + [list(loaded_arrays.keys())]
+                                    avail_colnames = [
+                                        list(table.column_names)
+                                        for table in input_tables
+                                    ] + [list(loaded_arrays.keys())]
                                 elif in_format.upper() == "HDF5":
-                                    avail_colnames = [list(table.keys()) for table in input_tables] + [list(loaded_arrays.keys())]
+                                    avail_colnames = [
+                                        list(table.keys()) for table in input_tables
+                                    ] + [list(loaded_arrays.keys())]
                                 else:
-                                    avail_colnames = [list(table.columns) for table in input_tables] + [list(loaded_arrays.keys())]
+                                    avail_colnames = [
+                                        list(table.columns) for table in input_tables
+                                    ] + [list(loaded_arrays.keys())]
                                 raise ValueError(
                                     f"Variable {node.id} is not available from input/created pyarrow file. "
                                     f"List of variables that can be loaded:\n{ str( avail_colnames ) }"
                                 )
 
-
             # Evaluate expression:
-            logger.debug(f"Evaluating column: {column_name}, expression: {column_expression} ")
+            logger.debug(
+                f"Evaluating column: {column_name}, expression: {column_expression} "
+            )
             result = eval(column_expression)
 
             # Remove unused variables:
@@ -157,9 +169,13 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
             f"Evaluated {n_evaluated} expressions, including columns: {', '.join(loaded_arrays.keys())}"
         )
 
-        utils.dump_arrays(loaded_arrays, out_format, h if in_format.upper()=="HDF5" else output_file)
+        utils.dump_arrays(
+            loaded_arrays, out_format, h if in_format.upper() == "HDF5" else output_file
+        )
 
     else:
-        logger.info("No evaluated expression. Is the input table with expressions empty?")
+        logger.info(
+            "No evaluated expression. Is the input table with expressions empty?"
+        )
 
     return 0

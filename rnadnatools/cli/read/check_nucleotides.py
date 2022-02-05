@@ -18,8 +18,12 @@ import numpy as np
 
 # Read the arguments:
 @read.command()
-@click.argument("input_fastq_table", type=click.Path(exists=True), metavar="FASTQ_TABLE")
-@click.argument("input_ref_table", type=click.Path(exists=True), metavar="REFERENCE_TABLE")
+@click.argument(
+    "input_fastq_table", type=click.Path(exists=True), metavar="FASTQ_TABLE"
+)
+@click.argument(
+    "input_ref_table", type=click.Path(exists=True), metavar="REFERENCE_TABLE"
+)
 @click.argument("output_file", type=click.Path(exists=False), metavar="OUTPUT_TABLE")
 @click.option(
     "--oligo",
@@ -30,7 +34,7 @@ import numpy as np
     "--oligo-name",
     help="Name of oligo used for column naming. Will be set to --oligo if not provided.",
     required=False,
-    default=None
+    default=None,
 )
 @click.option(
     "--readid-colname",
@@ -139,32 +143,40 @@ def check_nucleotides(
     if seq_colname is not None or readid_colname is not None:
         seqfile_header = open(input_fastq_table, "r").readline().strip()
         if not seqfile_header.startswith("#"):
-            logger.warning("Are you sure sequence table has header? Header line does not start with '#'.")
+            logger.warning(
+                "Are you sure sequence table has header? Header line does not start with '#'."
+            )
         else:
             seqfile_header = seqfile_header[1:]
         header = seqfile_header.split()
 
         if seq_colname is not None:
-            seq_column = np.where(np.array(header)==seq_colname)[0]
-            if len(seq_column)>1:
-                logger.warning(f"Mupltiple {seq_colname} columns in input sequence table")
+            seq_column = np.where(np.array(header) == seq_colname)[0]
+            if len(seq_column) > 1:
+                logger.warning(
+                    f"Mupltiple {seq_colname} columns in input sequence table"
+                )
             seq_column = seq_column[0]
 
         if readid_colname is not None:
-            readid_column = np.where(np.array(header)==readid_colname)[0]
-            if len(readid_column)>1:
-                logger.warning(f"Mupltiple {readid_colname} columns in input sequence table")
+            readid_column = np.where(np.array(header) == readid_colname)[0]
+            if len(readid_column) > 1:
+                logger.warning(
+                    f"Mupltiple {readid_colname} columns in input sequence table"
+                )
             readid_column = readid_column[0]
 
     if ref_colname is not None:
         posfile_header = open(input_ref_table, "r").readline().strip()
         if not posfile_header.startswith("#"):
-            logger.warning("Are you sure sequence table has header? Header line does not start with '#'.")
+            logger.warning(
+                "Are you sure sequence table has header? Header line does not start with '#'."
+            )
         else:
             posfile_header = posfile_header[1:]
         header = posfile_header.split()
-        ref_column = np.where(np.array(header)==ref_colname)[0]
-        if len(ref_column)>1:
+        ref_column = np.where(np.array(header) == ref_colname)[0]
+        if len(ref_column) > 1:
             logger.warning(f"Mupltiple {ref_colname} columns in input sequence table")
         ref_column = ref_column[0]
 
@@ -196,7 +208,7 @@ def check_nucleotides(
                     else:
                         start_corrected = oligo_position_start + shift
                         end_corrected = oligo_position_start + shift + len(oligo)
-                        if read[start_corrected:end_corrected]==oligo:
+                        if read[start_corrected:end_corrected] == oligo:
                             ret = 1
                         else:
                             ret = 0

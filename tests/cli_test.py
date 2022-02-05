@@ -1,6 +1,8 @@
 from click.testing import CliRunner
 from rnadnatools.cli import cli
+
 # import os.path as op
+
 
 def test_basic_cli(request):
     runner = CliRunner()

@@ -25,22 +25,22 @@ import pandas as pd
 @click.argument("output_file", type=click.Path(exists=False))
 @click.argument("in_paths", nargs=-1, type=click.Path(exists=True))
 @click.option(
-    '-i',
+    "-i",
     "--in-format",
     help="Type of input.",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5"], case_sensitive=False),
     required=False,
     show_default=True,
-    default='PARQUET'
+    default="PARQUET",
 )
 @click.option(
-    '-o',
+    "-o",
     "--out-format",
     help="Type of output. ",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5"], case_sensitive=False),
     required=False,
     show_default=True,
-    default='PARQUET'
+    default="PARQUET",
 )
 # @click.option(
 #     '-c',
@@ -51,12 +51,12 @@ import pandas as pd
 #     show_default=True,
 # )
 @click.option(
-    '-m',
+    "-m",
     "--col-modifiers",
     help='Comma-separated modifiers for column names (input for python formatting), for example: "{col_name}__test,{col_name}__another". Optional.',
     type=str,
     default=None,
-    required=False
+    required=False,
 )
 def merge(output_file, in_paths, in_format, out_format, col_modifiers):
     """
@@ -64,10 +64,12 @@ def merge(output_file, in_paths, in_format, out_format, col_modifiers):
     """
 
     if col_modifiers is not None:
-        col_modifiers = col_modifiers.strip().split(',')
-        assert len(in_paths)==len(col_modifiers), "Please, provide the modifiers for all input tables"
+        col_modifiers = col_modifiers.strip().split(",")
+        assert len(in_paths) == len(
+            col_modifiers
+        ), "Please, provide the modifiers for all input tables"
 
-    if in_format.upper()=="PARQUET" and out_format.upper()=="PARQUET":
+    if in_format.upper() == "PARQUET" and out_format.upper() == "PARQUET":
 
         input_tables = utils.load_tables(in_paths, in_format)
 
@@ -75,17 +77,23 @@ def merge(output_file, in_paths, in_format, out_format, col_modifiers):
         schema = []
         for i, table in enumerate(input_tables):
             if col_modifiers is not None:
-                table = table.rename_columns([col_modifiers[i].format(col_name=x) for x in table.column_names])
+                table = table.rename_columns(
+                    [col_modifiers[i].format(col_name=x) for x in table.column_names]
+                )
             columns += table.columns
             schema.append(table.schema)
 
         parquet_schema = pa.unify_schemas(schema)
         pq_merged = pa.Table.from_arrays(columns, schema=parquet_schema)
-        parquet_writer = pq.ParquetWriter(output_file, parquet_schema, compression="snappy")
+        parquet_writer = pq.ParquetWriter(
+            output_file, parquet_schema, compression="snappy"
+        )
         parquet_writer.write_table(pq_merged)
         parquet_writer.close()
 
     else:
-        raise NotImplementedError(f"in_format {in_format} and out_format {out_format} are not supported yet.")
+        raise NotImplementedError(
+            f"in_format {in_format} and out_format {out_format} are not supported yet."
+        )
 
     return 0

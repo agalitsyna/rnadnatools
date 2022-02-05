@@ -23,44 +23,44 @@ import pandas as pd
 @table.command()
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option(
-    '-i',
+    "-i",
     "--in-format",
     help="Type of input.",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
     required=False,
-    default="auto"
+    default="auto",
 )
 @click.option(
-    '-n',
+    "-n",
     "--nrows",
     help='Modifier for column names (input for python formatting), for example: "{colname}__test". Optional.',
     type=int,
     default=10,
-    required=False
+    required=False,
 )
-def head(input_file,
-        in_format,
-        nrows):
+def head(input_file, in_format, nrows):
     """
     Convert tables between formats, optionally modifying column names in the tables
     """
 
     # Guess format if not specified:
-    if in_format.upper()=='AUTO':
+    if in_format.upper() == "AUTO":
         in_format = utils.guess_format(input_file)
 
     # Read PARQUET:
-    if in_format.upper()=='PARQUET':
+    if in_format.upper() == "PARQUET":
         df = pd.read_parquet(input_file)
         print(df.head(nrows), file=sys.stdout)
 
     if in_format.upper() == "TSV" or in_format.upper() == "CSV":
-        df = pd.read_csv(input_file, sep="\t" if in_format.upper() == "TSV" else ',', nrows=nrows)
+        df = pd.read_csv(
+            input_file, sep="\t" if in_format.upper() == "TSV" else ",", nrows=nrows
+        )
         print(df, file=sys.stdout)
 
-    elif in_format.upper() == 'HDF5':
-        h = h5py.File(input_file, 'r')
-        dct = {k:h[k][:nrows] for k in h.keys()}
+    elif in_format.upper() == "HDF5":
+        h = h5py.File(input_file, "r")
+        dct = {k: h[k][:nrows] for k in h.keys()}
         h.close()
 
         df = pd.DataFrame.from_dict(dct)

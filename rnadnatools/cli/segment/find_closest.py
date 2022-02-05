@@ -42,10 +42,10 @@ import pandas as pd
     "-c",
     "--columns",
     help="Name of columns with sites positions for reporting in the output. "
-         "Should be in the default order: "
-         "start of left closeest site, end of left closest, "
-         "start of right closest, end of right closest. "
-         "Optional. ",
+    "Should be in the default order: "
+    "start of left closeest site, end of left closest, "
+    "start of right closest, end of right closest. "
+    "Optional. ",
     default="id,start_left,start_right,end_left,end_right",
     type=str,
     show_default=True,
@@ -58,13 +58,7 @@ import pandas as pd
     show_default=True,
 )
 def get_closest_sites(
-    filename_bed,
-    filename_rsites,
-    strand,
-    align_ids,
-    columns,
-    out,
-    out_format
+    filename_bed, filename_rsites, strand, align_ids, columns, out, out_format
 ):
     """
     Get distances to the closest sites to the start and end of mapped reads.

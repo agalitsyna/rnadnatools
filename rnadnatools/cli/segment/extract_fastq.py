@@ -22,7 +22,7 @@ import ast
 @click.argument("output_file", type=click.Path(exists=False))
 @click.argument("in_paths", nargs=-1, type=click.Path(exists=True))
 @click.option(
-    '-i',
+    "-i",
     "--in-format",
     help="Type of input. Optional.",
     default="PARQUET",
@@ -30,7 +30,7 @@ import ast
     show_default=True,
 )
 @click.option(
-    '-s',
+    "-s",
     "--selection-expression",
     help="Expression that will be used for filtering the output",
     default=None,
@@ -67,8 +67,15 @@ import ast
     show_default=True,
 )
 def extract_fastq(
-    in_paths, output_file, in_format, selection_expression,
-    key_start, key_end, key_readid, key_seq, key_qual
+    in_paths,
+    output_file,
+    in_format,
+    selection_expression,
+    key_start,
+    key_end,
+    key_readid,
+    key_seq,
+    key_qual,
 ):
     """Convert table to fastq file.
     The result of evaluation should be a vector of type column_format with the number of entries equal to the input size of array columns.
@@ -77,13 +84,15 @@ def extract_fastq(
     `rnadnatools segment extract-fastq -s "dna_end-dna_start>14" -i PARQUET tmp.fq test-sample_01.fragments.pq test-sample_01.table.tsv.pq`
     """
 
-    import numpy as np # Import is within the function to guarantee the visibility in vars()
+    import numpy as np  # Import is within the function to guarantee the visibility in vars()
 
     input_tables = utils.load_tables(in_paths, in_format)
 
     if selection_expression is not None:
         syntax_tree = ast.parse(selection_expression)
-        additional_vars = [node.id for node in ast.walk(syntax_tree) if type(node) is ast.Name]
+        additional_vars = [
+            node.id for node in ast.walk(syntax_tree) if type(node) is ast.Name
+        ]
     else:
         additional_vars = []
 
@@ -133,9 +142,9 @@ def extract_fastq(
         ends = vars()[key_end]
         for i in selected:
             outf.write("@" + readIDs[i] + "\n")  # Sequence name
-            outf.write(seqs[i][starts[i]: ends[i]] + "\n")  # Sequence
+            outf.write(seqs[i][starts[i] : ends[i]] + "\n")  # Sequence
             outf.write("+\n")
-            outf.write(quals[i][starts[i]: ends[i]] + "\n")  # Qualities
+            outf.write(quals[i][starts[i] : ends[i]] + "\n")  # Qualities
 
     logger.info(f"Done writing {len(selected)} sequences into {output_file} !")
 

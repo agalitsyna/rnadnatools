@@ -1,5 +1,6 @@
 # Manage logging
 from . import get_logger
+
 logger = get_logger(__name__)
 
 import pyarrow as pa
@@ -9,31 +10,33 @@ import pandas as pd
 import numpy as np
 import csv
 
+
 def guess_format(in_path):
-    """ Guess the file format of in_path. """
+    """Guess the file format of in_path."""
 
     if h5py.is_hdf5(in_path):
-        return 'hdf5'
+        return "hdf5"
     else:
         try:
-            file = open(in_path, 'r')
+            file = open(in_path, "r")
             sample = file.read(1024)
-            dialect = csv.Sniffer().sniff(sample, delimiters=[','])
+            dialect = csv.Sniffer().sniff(sample, delimiters=[","])
             file.seek(0)
-            return 'csv'
+            return "csv"
         except Exception as e:
             try:
-                file = open(in_path, 'r')
+                file = open(in_path, "r")
                 sample = file.read(1024)
-                dialect = csv.Sniffer().sniff(sample, delimiters=['\t', ' '])
+                dialect = csv.Sniffer().sniff(sample, delimiters=["\t", " "])
                 file.seek(0)
-                return 'tsv'
+                return "tsv"
             except Exception as e:
                 try:
                     pq.read_table(in_path)
-                    return 'parquet'
+                    return "parquet"
                 except Exception as e:
                     return None
+
 
 def load_tables(in_paths, in_format):
     """
@@ -48,18 +51,23 @@ def load_tables(in_paths, in_format):
         elif in_format.upper() == "HDF5":
             input_tables.append(h5py.File(input_table, "r"))
         elif in_format.upper() == "TSV":
-            logger.warning("Loading multiple TSV tables into memory, "
-                        "might result in RAM overload!")
+            logger.warning(
+                "Loading multiple TSV tables into memory, "
+                "might result in RAM overload!"
+            )
             input_tables.append(pd.read_csv(input_table, sep="\t"))
         elif in_format.upper() == "CSV":
-            logger.warning("Loading multiple CSV tables into memory, "
-                        "might result in RAM overload!")
+            logger.warning(
+                "Loading multiple CSV tables into memory, "
+                "might result in RAM overload!"
+            )
             input_tables.append(pd.read_csv(input_table, sep=","))
         else:
             raise ValueError(
                 f"Format {in_format} is not supported, use one of: TSV, CSV, HDF5, PARQUET."
             )
     return input_tables
+
 
 def dump_columns(result, in_format, column_format, column_name):
     """Dump array "result" into dictionary in required format."""
@@ -89,11 +97,10 @@ def dump_columns(result, in_format, column_format, column_name):
         loaded_arrays[column_name] = result.copy()
 
     else:
-        loaded_arrays[column_name] = pd.Series(
-            result, dtype=column_format.lower()
-        )
+        loaded_arrays[column_name] = pd.Series(result, dtype=column_format.lower())
 
     return loaded_arrays
+
 
 def dump_arrays(loaded_arrays, out_format, output_file):
     if out_format.upper() == "PARQUET":

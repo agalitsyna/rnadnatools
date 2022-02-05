@@ -23,21 +23,21 @@ import numpy as np
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path(exists=False))
 @click.option(
-    '-i',
+    "-i",
     "--in-format",
     help="Type of input.",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
     required=False,
-    default="auto"
+    default="auto",
 )
 @click.option(
-    '-c',
+    "-c",
     "--columns",
     help="Comma-separated list of column (=filters, here) to include into output file."
-         "If None (default), all columns will be included (any value of int/str column will be counted as True).",
+    "If None (default), all columns will be included (any value of int/str column will be counted as True).",
     type=str,
     required=False,
-    default=None
+    default=None,
 )
 @click.option(
     "--chunksize",
@@ -46,28 +46,23 @@ import numpy as np
     type=int,
     show_default=True,
 )
-def stats(input_file,
-         output_file,
-         in_format,
-         columns,
-         chunksize):
+def stats(input_file, output_file, in_format, columns, chunksize):
     """
     Save stats of the specified filters (number of True values per column). Output is always TSV.
     """
 
     if columns is not None:
-        columns = columns.split(',')
-        if len(columns)==0:
-            logger.warn('No columns selected. Nothing to be written. Exit.')
+        columns = columns.split(",")
+        if len(columns) == 0:
+            logger.warn("No columns selected. Nothing to be written. Exit.")
             return 0
 
-
     # Guess format if not specified:
-    if in_format.upper()=='AUTO':
+    if in_format.upper() == "AUTO":
         in_format = utils.guess_format(input_file)
 
     # Read PARQUET, no chunking:
-    if in_format.upper()=='PARQUET':
+    if in_format.upper() == "PARQUET":
         # Read:
         df = pd.read_parquet(input_file)
 
@@ -80,40 +75,43 @@ def stats(input_file,
         ).T
 
     # Write HDF5, no chunking for now:
-    elif in_format.upper()=="HDF5": # TODO: check
+    elif in_format.upper() == "HDF5":  # TODO: check
         logger.warn("Reading HDF5 for conversion, no chunking!")
 
-        h = h5py.File(input_file, 'r')
+        h = h5py.File(input_file, "r")
 
         # Filter rows and select columns:
         if columns is None:
             columns = list(h.keys())
 
-        output = pd.DataFrame(
-            {col: [np.sum(h[col][()] != False)] for col in columns}
-        ).T
+        output = pd.DataFrame({col: [np.sum(h[col][()] != False)] for col in columns}).T
 
         h.close()
 
     # Read:
     elif in_format.upper() == "TSV" or in_format.upper() == "CSV":
 
-        instream = pd.read_csv(input_file,
-                               sep="\t" if in_format.upper() == "TSV" else ',',
-                               chunksize=chunksize,
-                               low_memory=True)
+        instream = pd.read_csv(
+            input_file,
+            sep="\t" if in_format.upper() == "TSV" else ",",
+            chunksize=chunksize,
+            low_memory=True,
+        )
 
         for i, chunk in enumerate(instream):
 
-            if i==0:
+            if i == 0:
                 if columns is None:
                     columns = list(chunk.columns.values)
                 output = {col: np.sum(chunk.loc[:, col] != False) for col in columns}
             else:
-                output = {col: output[col]+np.sum(chunk.loc[:, col] != False) for col in columns}
+                output = {
+                    col: output[col] + np.sum(chunk.loc[:, col] != False)
+                    for col in columns
+                }
 
         output = pd.DataFrame({col: [output[col]] for col in columns}).T
 
-    output.to_csv(output_file, sep='\t', header=None)
+    output.to_csv(output_file, sep="\t", header=None)
 
     return 0
