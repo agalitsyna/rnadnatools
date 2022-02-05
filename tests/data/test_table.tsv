@@ -1,4 +1,0 @@
-rna_chrom	rna_start	rna_end	rna_strand	dna_chrom	dna_start	dna_end	dna_strand
-chr1	0	10	+	chr1	100	200	+
-chr1	0	10	-	chr1	0	10	-
-chr1	0	10	-	chr2	0	10	+
