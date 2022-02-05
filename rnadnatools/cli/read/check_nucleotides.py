@@ -27,6 +27,12 @@ import numpy as np
     required=True,
 )
 @click.option(
+    "--oligo-name",
+    help="Name of oligo used for column naming. Will be set to --oligo if not provided.",
+    required=False,
+    default=None
+)
+@click.option(
     "--readid-colname",
     help="Column name with readID in FASTQ_TABLE.",
     default=None,
@@ -85,6 +91,7 @@ def check_nucleotides(
     input_fastq_table,
     input_ref_table,
     oligo,
+    oligo_name,
     output_file,
     readid_colname,
     readid_column,
@@ -125,6 +132,9 @@ def check_nucleotides(
     if (ref_colname is not None) and (ref_column is not None):
         raise ValueError("--ref-colname and --ref-column cannot work together.")
 
+    if oligo_name is None:
+        oligo_name = oligo
+
     # Sniff for headers:
     if seq_colname is not None or readid_colname is not None:
         seqfile_header = open(input_fastq_table, "r").readline().strip()
@@ -160,7 +170,7 @@ def check_nucleotides(
 
     # Read the tables, check oligonucleotides and write output:
     with open(output_file, "w") as outf:
-        outf.write(f"#entry_index_{oligo}\toligo_{oligo}_at_{shift}\n")
+        outf.write(f"#entry_index_{oligo_name}\toligo_{oligo_name}_at_{shift}\n")
         with open(input_fastq_table, "r") as in_f:
             with open(input_ref_table, "r") as hits_f:
                 fastq_table_line = in_f.readline()
