@@ -17,13 +17,13 @@ def test_read_cli(request, tmpdir):
             "read",
             "check-nucleotides",
             "--oligo", 'GA',
-            "-o", outfile,
             "--readid-colname", "readID",
             "--seq-colname", "R1",
-            "--position-colname", "start_hit__bridge_forward_R1",
+            "--ref-colname", "start_hit__bridge_forward_R1",
             "--shift", 35,
             input_seqtable,
-            input_postable
+            input_postable,
+			outfile
         ],
     )
     assert result.exit_code == 0, result.output

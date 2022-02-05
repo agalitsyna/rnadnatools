@@ -67,23 +67,26 @@ import numpy as np
 @click.option(
     '-i',
     "--in-format",
-    help="Type of input_file.",
-    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5"], case_sensitive=False),
-    required=True
+    help="Type of input.",
+    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
+    required=False,
+    default="auto"
 )
 @click.option(
     '-r',
     "--ref-format",
     help="Type of reference_file.",
-    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5"], case_sensitive=False),
-    required=True
+    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
+    required=False,
+    default="auto"
 )
 @click.option(
     '-o',
     "--out-format",
-    help="Type of output_file. ",
-    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5"], case_sensitive=False),
-    required=True,
+    help="Type of output_file. Same as input for 'auto'",
+    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "auto"], case_sensitive=False),
+    required=False,
+    default='auto'
 )
 @click.option(
     "--new-colnames",
@@ -144,6 +147,14 @@ def align(input_file,
     # Define headers reading mode for TSV/CSV input and reference:
     input_header = 0 if input_header else None
     ref_header   = 0 if ref_header else None
+
+    # Guess format if not specified:
+    if in_format.upper()=='AUTO':
+        in_format = utils.guess_format(input_file)
+    if ref_format.upper()=='AUTO':
+        ref_format = utils.guess_format(reference_file)
+    if out_format.upper()=='AUTO':
+        out_format = in_format
 
     # Read input file:
     if in_format.upper()=='PARQUET':

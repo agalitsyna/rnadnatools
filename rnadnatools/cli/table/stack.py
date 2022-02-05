@@ -25,19 +25,17 @@ import pandas as pd
     '-i',
     "--in-format",
     help="Type of input.",
-    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5"], case_sensitive=False),
+    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
     required=False,
-    show_default=True,
-    default='PARQUET'
+    default="auto"
 )
 @click.option(
     '-o',
     "--out-format",
-    help="Type of output. ",
-    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5"], case_sensitive=False),
+    help="Type of output_file. Same as input for 'auto'",
+    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
     required=False,
-    show_default=True,
-    default='PARQUET'
+    default='auto'
 )
 @click.option('--validate-columns/--no-validate-columns',
               help="Flag for validating that all columns are present in all stacked files."
@@ -51,6 +49,12 @@ def stack(output_file,
     """
     Vertical stack of tables.
     """
+
+    # Guess format if not specified:
+    if in_format.upper()=='AUTO':
+        in_format = utils.guess_format(in_paths[0])
+    if out_format.upper()=='AUTO':
+        out_format = in_format
 
     input_tables = utils.load_tables(in_paths, in_format)
 

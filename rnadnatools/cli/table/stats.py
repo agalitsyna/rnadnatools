@@ -25,10 +25,10 @@ import numpy as np
 @click.option(
     '-i',
     "--in-format",
-    help="Type of input. Optional.",
-    default="PARQUET",
-    type=click.Choice(["TSV", "PARQUET", "HDF5"], case_sensitive=False),
-    show_default=True,
+    help="Type of input.",
+    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
+    required=False,
+    default="auto"
 )
 @click.option(
     '-c',
@@ -60,6 +60,11 @@ def stats(input_file,
         if len(columns)==0:
             logger.warn('No columns selected. Nothing to be written. Exit.')
             return 0
+
+
+    # Guess format if not specified:
+    if in_format.upper()=='AUTO':
+        in_format = utils.guess_format(input_file)
 
     # Read PARQUET, no chunking:
     if in_format.upper()=='PARQUET':

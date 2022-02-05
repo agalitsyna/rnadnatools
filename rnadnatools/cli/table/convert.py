@@ -28,15 +28,16 @@ import pandas as pd
     '-i',
     "--in-format",
     help="Type of input.",
-    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5"], case_sensitive=False),
-    required=True
+    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
+    required=False,
+    default="auto"
 )
 @click.option(
     '-o',
     "--out-format",
-    help="Type of output. ",
+    help="Type of output_file. Required parameter.",
     type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5"], case_sensitive=False),
-    required=True,
+    required=True
 )
 @click.option(
     "--chunksize",
@@ -63,6 +64,10 @@ def convert(input_file,
     Convert tables between formats, optionally modifying column names in the tables
     """
 
+    # Guess format if not specified:
+    if in_format.upper()=='AUTO':
+        in_format = utils.guess_format(input_file)
+
     if in_format==out_format:
         logger.info("in_format is same as out_format. Nothing to be done. Consider using cp instead.")
         return 0
@@ -88,7 +93,7 @@ def convert(input_file,
 
         # Read:
         if in_format.upper() == "TSV" or in_format.upper() == "CSV":
-            df = pd.read_csv(input_file, sep="\t" if in_format.upper() == "TSV" else ',', index=False)
+            df = pd.read_csv(input_file, sep="\t" if in_format.upper() == "TSV" else ',', index_col=False)
             dct = df.to_dict(orient='list')
             del df
         elif in_format.upper() == 'HDF5':

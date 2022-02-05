@@ -29,18 +29,18 @@ import pandas as pd
 @click.option(
     '-i',
     "--in-format",
-    help="Type of input. Optional.",
-    default="PARQUET",
-    type=click.Choice(["TSV", "PARQUET", "HDF5"], case_sensitive=False),
-    show_default=True,
+    help="Type of input.",
+    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
+    required=False,
+    default="auto"
 )
 @click.option(
     '-o',
     "--out-format",
-    help="Type of output. Optional.",
-    default="PARQUET",
-    type=click.Choice(["TSV", "PARQUET", "HDF5"], case_sensitive=False),
-    show_default=True,
+    help="Type of output_file. Same as input for 'auto'",
+    type=click.Choice(["TSV", "CSV", "PARQUET", "HDF5", "AUTO"], case_sensitive=False),
+    required=False,
+    default='auto'
 )
 def evaluate(column_schema, output_file, in_paths, in_format, out_format):
     """Create new columns according to the input expression.
@@ -60,6 +60,12 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
     import numpy as np  # Import is within the function to guarantee the visibility in vars()
 
     prohibited_symbols = [":", ".", "-", "/", "!", "?", "&", "|", "'", "%", "@"]
+
+    # Guess format if not specified:
+    if in_format.upper()=='AUTO':
+        in_format = utils.guess_format(in_paths[0])
+    if out_format.upper()=='AUTO':
+        out_format = in_format
 
     input_tables = utils.load_tables(in_paths, in_format)
 

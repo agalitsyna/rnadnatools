@@ -9,4 +9,4 @@ def table():
     pass
 
 
-from . import evaluate, convert, merge, align, stack, dump, stats
+from . import evaluate, convert, merge, align, stack, dump, stats, wc, head

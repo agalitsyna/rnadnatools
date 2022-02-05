@@ -7,6 +7,33 @@ import pyarrow.parquet as pq
 import h5py
 import pandas as pd
 import numpy as np
+import csv
+
+def guess_format(in_path):
+    """ Guess the file format of in_path. """
+
+    if h5py.is_hdf5(in_path):
+        return 'hdf5'
+    else:
+        try:
+            file = open(in_path, 'r')
+            sample = file.read(1024)
+            dialect = csv.Sniffer().sniff(sample, delimiters=[','])
+            file.seek(0)
+            return 'csv'
+        except Exception as e:
+            try:
+                file = open(in_path, 'r')
+                sample = file.read(1024)
+                dialect = csv.Sniffer().sniff(sample, delimiters=['\t', ' '])
+                file.seek(0)
+                return 'tsv'
+            except Exception as e:
+                try:
+                    pq.read_table(in_path)
+                    return 'parquet'
+                except Exception as e:
+                    return None
 
 def load_tables(in_paths, in_format):
     """
