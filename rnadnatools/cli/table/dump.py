@@ -115,7 +115,6 @@ def dump(output_file, in_paths, in_format, out_format, filter, columns): #, chun
             list_available += table.column_names
             frame = table.select(columns_selected)
             frame_filtered = frame.take(filter_col) if filter is not None else frame
-            print(frame_filtered, columns_selected, filter_col)
             columns_loaded += frame_filtered
             schema.append(frame.schema)
             list_loaded += columns_selected

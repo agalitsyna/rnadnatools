@@ -44,13 +44,13 @@ import ast
 )
 @click.option(
     "--key-end",
-    help="Column name for the sequence start",
+    help="Name of column with sequence start.",
     default="dna_end",
     show_default=True,
 )
 @click.option(
     "--key-readid",
-    help="Column name for the readID",
+    help="Name of column with readID",
     default="readID",
     show_default=True,
 )
@@ -66,6 +66,11 @@ import ast
     default="Q1",
     show_default=True,
 )
+@click.option(
+    "--zero-based/--one-based",
+    help="Are the positions of start and end zero-based or one-based?",
+    default=True,
+)
 def extract_fastq(
     in_paths,
     output_file,
@@ -76,6 +81,7 @@ def extract_fastq(
     key_readid,
     key_seq,
     key_qual,
+    zero_based
 ):
     """Convert table to fastq file.
     The result of evaluation should be a vector of type column_format with the number of entries equal to the input size of array columns.
@@ -138,8 +144,8 @@ def extract_fastq(
         readIDs = vars()[key_readid]
         seqs = vars()[key_seq]
         quals = vars()[key_qual]
-        starts = vars()[key_start]
-        ends = vars()[key_end]
+        starts = vars()[key_start] - (1 if not zero_based else 0)
+        ends = vars()[key_end] - (1 if not zero_based else 0)
         for i in selected:
             outf.write("@" + readIDs[i] + "\n")  # Sequence name
             outf.write(seqs[i][starts[i] : ends[i]] + "\n")  # Sequence
