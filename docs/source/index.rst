@@ -9,7 +9,9 @@ Welcome to rnadnatools's documentation!
 .. toctree::
    :maxdepth: 2
 
-includeme
+. includeme
+
+. rnadnatools
 
 Indices and tables
 ==================

@@ -203,11 +203,12 @@ def check_nucleotides(
                     idx = hits_table_line.split()[readid_column]
 
                     # Checking presence:
-                    if oligo_position_start > len(read):
+                    start_corrected = oligo_position_start + shift
+                    end_corrected = oligo_position_start + shift + len(oligo)
+                    # if the rightmost position of the oligo is out of the read, then no need to check at all:
+                    if (end_corrected >= len(read)) or (start_corrected<0):
                         ret = 0
                     else:
-                        start_corrected = oligo_position_start + shift
-                        end_corrected = oligo_position_start + shift + len(oligo)
                         if read[start_corrected:end_corrected] == oligo:
                             ret = 1
                         else:
