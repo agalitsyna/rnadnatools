@@ -16,11 +16,12 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import h5py
 import pandas as pd
+import numpy as np
 
 # Read the arguments:
 @table.command()
-@click.argument("input_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path(exists=False))
+@click.argument("in_paths", nargs=-1, type=click.Path(exists=True))
 @click.option(
     "-i",
     "--in-format",
@@ -55,14 +56,14 @@ import pandas as pd
     required=False,
     default=None,
 )
-@click.option(
-    "--chunksize",
-    help="Chunksize for tables loading. Supported for TSV/CSV and HDF5 input for now.",
-    default=1_000_000,
-    type=int,
-    show_default=True,
-)
-def dump(input_file, output_file, in_format, out_format, filter, columns, chunksize):
+# @click.option(
+#     "--chunksize",
+#     help="Chunksize for tables loading. Supported for TSV/CSV and HDF5 input for now.",
+#     default=1_000_000,
+#     type=int,
+#     show_default=True,
+# )
+def dump(output_file, in_paths, in_format, out_format, filter, columns): #, chunksize):
     """
     Dump certain columns of the dataset into output file.
     """
@@ -75,136 +76,94 @@ def dump(input_file, output_file, in_format, out_format, filter, columns, chunks
 
     # Guess format if not specified:
     if in_format.upper() == "AUTO":
-        in_format = utils.guess_format(input_file)
+        in_format = utils.guess_format(in_paths[0])
     if out_format.upper() == "AUTO":
         out_format = in_format
 
-    # Read PARQUET, no chunking:
-    if in_format.upper() == "PARQUET":
-        # Read:
-        df = pd.read_parquet(input_file)
+    input_tables = utils.load_tables(in_paths, in_format)
 
-        # Filter rows and select columns:
-        if filter is not None:
-            df = df.loc[df[filter], :]
-        if columns is not None:
-            df = df.loc[:, columns]
+    # Load filter:
+    if filter is not None:
+        isFound = False
+        for table in input_tables:
+            if in_format.upper() == "PARQUET":
+                if filter in table.column_names and not isFound:
+                    if table[filter].type == pa.bool_():
+                        filter_col = np.where(loaded_arrays[filter].to_numpy(zero_copy_only=False))[0]
+                        isFound = True
+                    else:
+                        filter_col = np.where(table[filter].to_numpy())[0]
+                        isFound = True
+            # elif in_format.upper() == "HDF5":
+            #     if filter in table.keys():
+            #         filter_col = np.where(table[filter][()])[0]
+            #         isFound = True
+            # else:
+            #     if filter in table.columns:
+            #         filter_col = np.where(table.loc[:, filter])[0]
+        if not isFound:
+            raise ValueError(f"Column {filter} does not exist in the input tables!")
 
-        # Write:
-        if out_format.upper() == "CSV" or out_format.upper() == "TSV":
-            df.to_csv(output_file, sep="\t" if out_format.upper() == "TSV" else ",")
-        elif out_format.upper() == "HDF5":
-            output_file = h5py.File(output_file, "a")
-            for column_name, result in df.to_dict(orient="list").items():
-                output_file.create_dataset(column_name, data=result)
-            output_file.close()
-        return 0
+    # Pick the data:
+    if in_format.upper()=="PARQUET" and out_format.upper() == "PARQUET":
+        columns_loaded = []
+        schema = []
+        for i, table in enumerate(input_tables):
+            columns_selected = [x for x in columns if x in table.column_names]
+            frame = table.select(columns_selected)
+            columns_loaded += frame.take(filter_col) if filter is not None else frame
+            schema.append(frame.schema)
 
-    # Write HDF5, no chunking for now:
-    if out_format.upper() == "HDF5" or in_format.upper() == "HDF5":
-        logger.warn("Writing HDF5 for conversion, no chunking!")
-
-        # Read:
-        if in_format.upper() == "TSV" or in_format.upper() == "CSV":
-            df = pd.read_csv(
-                input_file, sep="\t" if in_format.upper() == "TSV" else ",", index=False
-            )
-
-            # Filter rows and select columns:
-            if filter is not None:
-                df = df.loc[df[filter], :]
-            if columns is not None:
-                df = df.loc[:, columns]
-
-            dct = df.to_dict(orient="list")
-            del df
-
-        elif in_format.upper() == "HDF5":
-            h = h5py.File(input_file, "r")
-            # dct = {k:h[k][()] for k in h.keys()}
-
-            # Filter rows and select columns:
-            if columns is not None:
-                dct = {k: h[k][()] for k in columns}
-            else:
-                dct = {k: h[k][()] for k in h.keys()}
-
-            if filter is not None:
-                dct = {k: dct[k][dct[filter]] for k in dct.keys()}  # TODO: check
-
-            h.close()
-
-        # Write:
-        if out_format.upper() == "HDF5":
-            output_file = h5py.File(output_file, "a")
-            for column_name, result in dct.items():
-                output_file.create_dataset(column_name, data=result)
-            output_file.close()
-        elif out_format.upper() == "CSV" or out_format.upper() == "TSV":
-            df = pd.DataFrame(dct)
-            df.to_csv(
-                output_file,
-                sep="\t" if out_format.upper() == "TSV" else ",",
-                index=False,
-            )
-        return 0
-
-    # Read other formats:
-    if in_format.upper() == "TSV" or in_format.upper() == "CSV":
-        instream = pd.read_csv(
-            input_file,
-            sep="\t" if in_format.upper() == "TSV" else ",",
-            chunksize=chunksize,
-            low_memory=True,
+        parquet_schema = pa.unify_schemas(schema)
+        pq_merged = pa.Table.from_arrays(columns_loaded, schema=parquet_schema)
+        parquet_writer = pq.ParquetWriter(
+            output_file, parquet_schema, compression="snappy"
         )
-
-    if out_format.upper() == "PARQUET":
-        for i, chunk in enumerate(instream):
-
-            # Filter rows and select columns:
-            df_chunk = chunk
-            if filter is not None:
-                df_chunk = chunk.loc[chunk[filter], :]
-            if columns is not None:
-                df_chunk = df_chunk.loc[:, columns]
-
-            if i == 0:
-                if col_modifier is None:
-                    columns = {x: x.replace("#", "") for x in df_chunk.columns}
-                else:
-                    columns = {
-                        x: col_modifier.format(colname=x.replace("#", ""))
-                        for x in df_chunk.columns
-                    }
-                frame = pa.Table.from_pandas(df=df_chunk.rename(columns=columns))
-                parquet_schema = frame.schema
-                parquet_writer = pq.ParquetWriter(
-                    output_file, parquet_schema, compression="snappy"
-                )
-            table = pa.Table.from_pandas(
-                df_chunk.rename(columns=columns), schema=parquet_schema
-            )
-            parquet_writer.write_table(table)
-
+        parquet_writer.write_table(pq_merged)
         parquet_writer.close()
 
-    elif out_format.upper() == "CSV" or out_format.upper() == "TSV":
-        header = True
-        for i, chunk in enumerate(instream):
-
-            # Filter rows and select columns:
-            df_chunk = chunk
-            if filter is not None:
-                df_chunk = chunk.loc[chunk[filter], :]
-            if columns is not None:
-                df_chunk = df_chunk.loc[:, columns]
-            df_chunk.to_csv(
-                output_file,
-                sep="\t" if out_format.upper() == "TSV" else ",",
-                header=header,
-                mode="a" if i != 0 else "w",
-                index=False,
-            )
-            header = False
+    else:
+        raise NotImplementedError(
+            f"in_format {in_format} and out_format {out_format} are not supported yet."
+        )
+    
+    # elif out_format.upper() == "CSV" or out_format.upper() == "TSV":
+    #     header = True
+    #     for i, chunk in enumerate(input_tables):
+    #         chunk.loc[:, columns].to_csv(
+    #             output_file,
+    #             sep="," if out_format.upper() == "CSV" else "\t",
+    #             header=header,
+    #             mode="a" if i != 0 else "w",
+    #             index=False,
+    #         )
+    #         header = False
+    #
+    # elif out_format.upper() == "HDF5":
+    #     h = h5py.File(output_file, "w")
+    #     s = 0
+    #     for i, chunk in enumerate(input_tables):
+    #         if i == 0:
+    #             for col in columns:
+    #                 if pd.api.types.is_object_dtype(chunk[col]):
+    #                     h.create_dataset(
+    #                         col,
+    #                         data=chunk[col].astype("S100"),
+    #                         maxshape=(None,),
+    #                         chunks=True,
+    #                     )
+    #                 else:
+    #                     h.create_dataset(
+    #                         col, data=chunk[col], maxshape=(None,), chunks=True
+    #                     )
+    #             s += len(chunk[col])
+    #         else:
+    #             for col in columns:
+    #                 h[col].resize((s + len(chunk[col]),))
+    #                 if pd.api.types.is_object_dtype(chunk[col]):
+    #                     h[col][s : s + len(chunk[col])] = chunk[col].astype("S100")
+    #                 else:
+    #                     h[col][s : s + len(chunk[col])] = chunk[col]
+    #             s += len(chunk[col])
 
     return 0
