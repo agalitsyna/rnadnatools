@@ -10,6 +10,12 @@ import pandas as pd
 import numpy as np
 import csv
 
+import re
+def match(v, expr):
+    r = re.compile(expr)
+    matcher = np.vectorize(lambda x:bool(r.match(x)))
+
+    return matcher(v)
 
 def guess_format(in_path):
     """Guess the file format of in_path."""

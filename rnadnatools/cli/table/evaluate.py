@@ -60,6 +60,7 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
     import numpy as np  # Import is within the function to guarantee the visibility in vars()
 
     prohibited_symbols = [":", ".", "-", "/", "!", "?", "&", "|", "'", "%", "@"]
+    match = utils.match # define matcher; this now can be used as "match(col, expr)" in the evaluation scheme
 
     # Guess format if not specified:
     if in_format.upper() == "AUTO":
