@@ -88,12 +88,12 @@ def dump(output_file, in_paths, in_format, out_format, filter, columns): #, chun
         for table in input_tables:
             if in_format.upper() == "PARQUET":
                 if filter in table.column_names and not isFound:
-                    if table[filter].type == pa.bool_():
-                        filter_col = np.where(loaded_arrays[filter].to_numpy(zero_copy_only=False))[0]
-                        isFound = True
-                    else:
-                        filter_col = np.where(table[filter].to_numpy())[0]
-                        isFound = True
+                    # if table[filter].type == pa.bool_():
+                    #     filter_col = np.where(table[filter].to_numpy(zero_copy_only=False))[0]
+                    #     isFound = True
+                    # else:
+                    filter_col = np.where(table[filter].to_numpy())[0]
+                    isFound = True
             # elif in_format.upper() == "HDF5":
             #     if filter in table.keys():
             #         filter_col = np.where(table[filter][()])[0]
@@ -108,11 +108,20 @@ def dump(output_file, in_paths, in_format, out_format, filter, columns): #, chun
     if in_format.upper()=="PARQUET" and out_format.upper() == "PARQUET":
         columns_loaded = []
         schema = []
+        list_loaded = []
+        list_available = []
         for i, table in enumerate(input_tables):
             columns_selected = [x for x in columns if x in table.column_names]
+            list_available += table.column_names
             frame = table.select(columns_selected)
-            columns_loaded += frame.take(filter_col) if filter is not None else frame
+            frame_filtered = frame.take(filter_col) if filter is not None else frame
+            print(frame_filtered, columns_selected, filter_col)
+            columns_loaded += frame_filtered
             schema.append(frame.schema)
+            list_loaded += columns_selected
+
+        if len(list_loaded)!=len(columns):
+            raise ValueError(f"Columns: {set(columns)-set(list_loaded)}\n were not found in input tables. Available columns:\n {list_available}")
 
         parquet_schema = pa.unify_schemas(schema)
         pq_merged = pa.Table.from_arrays(columns_loaded, schema=parquet_schema)
@@ -126,7 +135,7 @@ def dump(output_file, in_paths, in_format, out_format, filter, columns): #, chun
         raise NotImplementedError(
             f"in_format {in_format} and out_format {out_format} are not supported yet."
         )
-    
+
     # elif out_format.upper() == "CSV" or out_format.upper() == "TSV":
     #     header = True
     #     for i, chunk in enumerate(input_tables):

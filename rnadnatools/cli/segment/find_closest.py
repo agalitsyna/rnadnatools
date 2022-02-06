@@ -78,6 +78,7 @@ def get_closest_sites(
 
     # Read the restriction sites:
     rsites = pd.read_csv(filename_rsites, header=None, sep="\t")
+    rsites = rsites.iloc[:, :6] # Remove any extra columns
     rsites.columns = ["chrom", "start", "end", "name", "_", "strand"]
     if strand != "b":
         rsites = rsites.loc[rsites.strand == strand, :].sort_values(["chrom", "start"])
@@ -89,6 +90,7 @@ def get_closest_sites(
         bed_file = pd.read_csv(filename_bed, sep="\t", header=None)
     except pd.errors.EmptyDataError:
         bed_file = pd.DataFrame(columns=np.arange(7))
+    bed_file = bed_file.iloc[:, :7] # Remove any extra columns
     bed_file.columns = ["chrom", "start", "end", "read_id", "q", "strand", "cigar"]
 
     # Convert dataframe to more effective numpy arrays:
