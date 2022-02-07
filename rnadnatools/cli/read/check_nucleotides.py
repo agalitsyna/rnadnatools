@@ -206,7 +206,7 @@ def check_nucleotides(
                     start_corrected = oligo_position_start + shift
                     end_corrected = oligo_position_start + shift + len(oligo)
                     # if the rightmost position of the oligo is out of the read, then no need to check at all:
-                    if (end_corrected >= len(read)) or (start_corrected<0):
+                    if (end_corrected > len(read)) or (start_corrected < 0):
                         ret = 0
                     else:
                         if read[start_corrected:end_corrected] == oligo:
