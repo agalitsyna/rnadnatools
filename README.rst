@@ -8,17 +8,18 @@ such as table manipultaions, nucleotide sequence extraction, etc.
 We collect all related instruments as Python-based CLI.
 
 These tools are used in recently developed nextflow pipeline to map and analyse RNA-DNA interactions:
-[https://github.com/agalitsyna/RedClib/tree/redc-nextflow-dsl2](https://github.com/agalitsyna/RedClib/tree/redc-nextflow-dsl2)
+`https://github.com/agalitsyna/RedClib/tree/redc-nextflow-dsl2 <https://github.com/agalitsyna/RedClib/tree/redc-nextflow-dsl2>`_
 
 
 Installation
 ------
 
-```
-git clone https://github.com/agalitsyna/rnadnatools
-cd rnadnatools 
-pip install -e .
-```
+Install rnadnatools with ::
+
+    git clone https://github.com/agalitsyna/rnadnatools
+    cd rnadnatools
+    pip install -e .
+
 
 Key concepts
 =======
