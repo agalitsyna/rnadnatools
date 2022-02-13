@@ -43,6 +43,159 @@ def guess_format(in_path):
                 except Exception as e:
                     return None
 
+def update_df_chunk(input_stream, dct, key=3):
+    """
+    Update chunk read from instream into dct dictionary.
+
+    Parameters
+    ----------
+    input_stream: stream of dataframes from file
+    dct: output dictionary
+    key: column of input stream dataframes that will be used as dict keys
+
+    Returns
+    -------
+
+    """
+
+    try:
+        df = next(input_stream)
+    except StopIteration as e:
+        raise StopIteration("Update impossible")
+
+    l = len(df)
+    dct_tmp = df.to_dict(orient='list')
+    dct_tmp = {dct_tmp[key][i]: {k: dct_tmp[k][i] for k in dct_tmp.keys()} for i in range(l)}
+
+    dct.update(dct_tmp)
+
+    return dct, df.columns, dict(df.dtypes)
+
+
+def write_chunk(chunk, output_file, out_format, writer=None, s=None, mode='w'):
+    """
+    Write chunk table into output file in a desired format.
+    hdf5 not tested yet.
+
+    Parameters
+    ----------
+    chunk
+    output_file
+    out_format
+    writer: writer (for hdf5 and parquet)
+    s: length of written objects (for hdf5)
+    mode: 'w' for writing or 'a' for appending
+
+    Returns
+    -------
+    (writer, s) tuples, will be None if absent
+    """
+    if out_format.upper() == "PARQUET":
+
+        pq_table_output = pa.Table.from_pandas(chunk)
+
+        # Write the output to the same input file:
+        parquet_schema = pq_table_output.schema
+
+        if mode == 'w':
+            parquet_writer = pq.ParquetWriter(
+                output_file, parquet_schema, compression="snappy"
+            )
+        else:
+            parquet_writer = writer
+
+        parquet_writer.write_table(pq_table_output)
+
+        return parquet_writer, None
+
+
+    elif out_format.upper() == "HDF5":
+
+        if mode == 'w':
+            h = h5py.File(output_file, mode=mode)
+        else:
+            h = writer
+
+        if mode == 'w':
+            s = 0
+            for col in chunk.columns:
+                if pd.api.types.is_object_dtype(chunk[col]):
+                    h.create_dataset(
+                        col,
+                        data=chunk[col].astype('S100').values,
+                        dtype='S100',
+                        maxshape=(None,),
+                        chunks=True,
+                    )
+                else:
+                    h.create_dataset(
+                        col,
+                        data=chunk[col].values,
+                        dtype=chunk[col].dtype.type,
+                        maxshape=(None,),
+                        chunks=True
+                    )
+            s += len(chunk[col])
+        else:
+            for col in chunk.columns:
+                h[col].resize((s + len(chunk[col]),))
+                if pd.api.types.is_object_dtype(chunk[col]):
+                    h[col][s: s + len(chunk[col])] = chunk[col].astype("S100")
+                else:
+                    h[col][s: s + len(chunk[col])] = chunk[col]
+            s += len(chunk[col])
+
+        return h, s
+
+    else:
+
+        chunk.to_csv(
+            output_file,
+            sep="," if out_format.upper() == "CSV" else "\t",
+            header=True if mode == 'w' else None,
+            mode=mode,
+            index=False,
+        )
+
+        return None, None
+
+
+def load_table(in_path,
+               in_format="AUTO",
+               chunksize=None,
+               usecols=None,
+               header=None):
+    """
+
+    Parameters
+    ----------
+    in_path: input file
+    in_format: Type of input. Can be either "TSV", "CSV", "PARQUET", "HDF5", "AUTO"
+
+    Returns
+    -------
+    iterator with chunked input tables
+    """
+
+    if in_format.upper() == "AUTO":
+        in_format = guess_format(in_path)
+
+    # Read input file:
+    if in_format.upper() == "PARQUET":
+        stream = [pd.read_parquet(in_path, columns=usecols)]
+    elif in_format.upper() in ["TSV", "CSV"]:
+        stream = pd.read_csv(in_path, sep="," if in_format.upper()=="CSV" else "\t",
+                             header=header,
+                             chunksize=chunksize,
+                             usecols=usecols)
+    elif in_format.upper() == "HDF5":
+        h = h5py.File(in_path, "r")
+        keys = usecols if usecols else h.keys()
+        dct = {k: h[k][()] for k in keys}
+        h.close()
+        stream = [pd.DataFrame.from_dict(dct)]
+
+    return stream
 
 def load_tables(in_paths, in_format):
     """

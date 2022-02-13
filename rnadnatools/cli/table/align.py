@@ -26,32 +26,17 @@ import numpy as np
 )
 @click.argument("output_file", metavar="OUTPUT_FILE", type=click.Path(exists=False))
 @click.option(
-    "--key-colname",
-    help="ID of the key column in input_file.",
+    "--key-column", "--key-colname",
+    help="ID of the key column in input_file. Can be either string or integer.",
     type=str,
-    default=None,
-    show_default=True,
+    required=True,
 )
 @click.option(
-    "--key-column",
-    help="Index of the column with key. Cannot be together with --key-colname.",
+    "--ref-column", "--ref-colname",
+    help="ID of the reference column in reference_file. String or integer.",
     default=None,
-    type=int,
-    show_default=True,
-)
-@click.option(
-    "--ref-colname",
-    help="ID of the reference column in reference_file.",
     type=str,
-    default=None,
-    show_default=True,
-)
-@click.option(
-    "--ref-column",
-    help="Index of the column with reference. Cannot be together with --ref-colname.",
-    default=None,
-    type=int,
-    show_default=True,
+    required=True,
 )
 @click.option(
     "--fill-values",
@@ -105,22 +90,28 @@ import numpy as np
     help="Flag for dropping the key column of table when writing to output.",
     default=True,
 )
-# @click.option(
-#     '-c',
-#     "--chunksize",
-#     help="Chunksize for input_file loading. Supported for TSV/CSV and HDF5 input for now.",
-#     default=1_000_000,
-#     type=int,
-#     show_default=True,
-# )
+@click.option(
+    '-c',
+    "--chunksize",
+    help="Chunksize for loading (not supported for HDF5 and PARQUET for now).",
+    default=1_000_000,
+    type=int,
+    show_default=True,
+)
+@click.option(
+    '-c',
+    "--chunksize-writer",
+    help="Chunksize for writing.",
+    default=1_000_000,
+    type=int,
+    show_default=True,
+)
 def align(
     input_file,
     reference_file,
     output_file,
     key_column,
-    key_colname,
     ref_column,
-    ref_colname,
     fill_values,
     in_format,
     ref_format,
@@ -129,6 +120,8 @@ def align(
     input_header,
     ref_header,
     drop_key,
+    chunksize,
+    chunksize_writer
 ):
     """
     Align the INPUT_TABLE by the key-column to the REFERENCE_TABLE by the ref-column.
@@ -136,119 +129,105 @@ def align(
     The format of key-column and ref-column is assumed to be string by default.
     """
 
-    # Checks the input parameters:
-    if (key_colname is None) and (key_column is None):
-        raise ValueError("Please, provide either --key-colname or --key-column.")
-    if (key_colname is not None) and (key_column is not None):
-        raise ValueError("--key-colname and --key-column cannot work together.")
+    # columns reporing mode:
+    fill_values = fill_values.split(',')
+    if new_colnames:
+        new_colnames = new_colnames.split(',')
 
-    if (ref_colname is None) and (ref_column is None):
-        raise ValueError("Please, provide either --ref-colname or --ref-column.")
-    if (ref_colname is not None) and (ref_column is not None):
-        raise ValueError("--ref-colname and --ref-column cannot work together.")
-
-    # Define headers reading mode for TSV/CSV input and reference:
-    input_header = 0 if input_header else None
-    ref_header = 0 if ref_header else None
-
-    # Guess format if not specified:
-    if in_format.upper() == "AUTO":
-        in_format = utils.guess_format(input_file)
-    if ref_format.upper() == "AUTO":
-        ref_format = utils.guess_format(reference_file)
+    # output format:
     if out_format.upper() == "AUTO":
         out_format = in_format
 
-    # Read input file:
-    if in_format.upper() == "PARQUET":
-        df = pd.read_parquet(input_file)
-    elif in_format.upper() == "TSV":
-        df = pd.read_csv(input_file, sep="\t", header=input_header)
-    elif in_format.upper() == "CSV":
-        df = pd.read_csv(input_file, sep=",", header=input_header)
-    elif in_format.upper() == "HDF5":
-        h = h5py.File(input_file, "r")
-        dct = {k: h[k][()] for k in h.keys()}
-        h.close()
-        df = pd.DataFrame.from_dict(dct)
+    # column names for input and reference:
+    key_column = int(key_column) if key_column.isdigit() else key_column
+    ref_column = int(ref_column) if ref_column.isdigit() else ref_column
 
-    if key_colname is None:
-        key_colname = df.columns[key_column]
+    # Pre-load input_stream keys:
+    input_stream_keys = utils.load_table(input_file,
+                                    in_format,
+                                    chunksize=chunksize,
+                                    usecols=[key_column],
+                                    header=0 if input_header else None)
+    l = map(lambda x: list(x[key_column].values), input_stream_keys)
+    input_ids = set([y for x in list(l) for y in x])
 
-    # Read reference:
-    if ref_format.upper() == "PARQUET":
-        df_ref = pd.read_parquet(reference_file)
-    elif ref_format.upper() == "TSV":
-        df_ref = pd.read_csv(reference_file, sep="\t", header=ref_header)
-    elif ref_format.upper() == "CSV":
-        df_ref = pd.read_csv(reference_file, sep=",", header=ref_header)
-    elif ref_format.upper() == "HDF5":
-        h = h5py.File(reference_file, "r")
-        dct = {k: h[k][()] for k in h.keys()}
-        h.close()
-        df_ref = pd.DataFrame.from_dict(dct)
+    # Define input stream:
+    input_stream = utils.load_table(input_file,
+                                    in_format,
+                                    chunksize=chunksize,
+                                    header=0 if input_header else None)
 
-    if ref_colname is None:
-        ref_colname = df_ref.columns[ref_column]
+    # Define reference stream:
+    reference_stream = utils.load_table(reference_file,
+                                    ref_format,
+                                    usecols=[ref_column],
+                                    chunksize=chunksize,
+                                    header=0 if ref_header else None)
+    lst_ref = [y for x in reference_stream for y in x[ref_column].tolist()][::-1]
 
-    ids = df.loc[:, key_colname].values.astype(str)
-    ref_ids = df_ref[ref_colname].values.astype(str)
-    del df_ref
+    # Define input for reader/writer:
+    dct_input, colnames, dtypes = utils.update_df_chunk(input_stream, {}, key=key_column)
+    if new_colnames:
+        dct_rename = dict(zip(colnames, new_colnames))
+    keys_loaded = set(dct_input.keys()) # loaded input keys for fast search
+    empty_input = dict(zip(colnames, fill_values))
 
-    # List of reference values:
-    ref = pd.DataFrame({"id": ref_ids}).reset_index().set_index("id")
-    l_ref = len(ref_ids)
+    k = lst_ref.pop()
+    mode = 'w'
+    dumped = []
+    finish = False # flag for finishing the iteration over reference keys
 
-    # Match input and reference values:
-    ids = [x for x in ids if x in ref_ids]
-    ids_order = ref.loc[ids, "index"]
+    while True: # iterate over reference keys
 
-    # Create the list of default values:
-    fill_values = fill_values.split(",")
-    if len(fill_values) == 1:
-        fill_values = fill_values * len(df.columns)
-    else:
-        assert len(fill_values) == len(
-            df.columns
-        ), "Provide the values for each column of input table."
+        if k in keys_loaded: # check loaded keys
+            # Pop written entries from dct_input and store:
+            dumped.append(dct_input.pop(k))
+            if len(lst_ref)>0:
+                k = lst_ref.pop()
+            else:
+                finish = True
 
-    # Create the dictionary with the final values:
-    if new_colnames is not None:
-        new_colnames = new_colnames.split(",")
-        assert len(new_colnames) == len(
-            df.columns
-        ), "Provide the column names equal to input table."
-    else:
-        new_colnames = df.columns
+        elif k not in input_ids: # check all possible keys of input
+            # Store empty new line:
+            empty_input[key_column] = k
+            dumped.append(dict(empty_input))
+            if len(lst_ref)>0:
+                k = lst_ref.pop()
+            else:
+                finish = True
 
-    dct_updated = {}
-    all_columns = df.columns
-    df = df.set_index(key_colname)
-    for k, k_new, v in zip(all_columns, new_colnames, fill_values):
-        if k == key_column:
-            if not drop_key:
-                dct_updated[k_new] = ref_ids
-            continue
-        # Fill in the whole column including the missing values:
-        dct_updated[k_new] = np.full(l_ref, v, dtype=df.dtypes[k])
-        # Update only the values present in input table:
-        dct_updated[k_new][ids_order] = df.loc[ids, k].values
-    del df
+        else: # not found in loaded yet available from input, read next input piece:
+            # Parse next input chunk:
+            try:
+                utils.update_df_chunk(input_stream, dct_input, key=key_column)
+                keys_loaded = set(dct_input.keys())
+            except Exception as e:
+                raise ValueError(f"Key {k} not found in {in_path}")
 
-    # Write output:
-    if out_format.upper() == "HDF5":
-        output_file = h5py.File(output_file, "a")
-        for column_name, result in dct_updated.items():
-            output_file.create_dataset(column_name, data=result)
-        output_file.close()
+        # Write output:
+        if len(dumped) >= chunksize_writer or finish:
+            dumped = pd.DataFrame(dumped)
+            dumped = dumped.loc[:, colnames] # preserve order
+            dumped = dumped.astype(dtypes) # preserve data types
 
-    elif out_format.upper() == "CSV":
-        pd.DataFrame(dct_updated).to_csv(output_file, sep=",", index=False)
+            if drop_key: # Drop original key, if needed:
+                dumped = dumped.drop(key_column, axis=1)
 
-    elif out_format.upper() == "TSV":
-        pd.DataFrame(dct_updated).to_csv(output_file, sep="\t", index=False)
+            if new_colnames: # Add ned names of columns:
+                dumped = dumped.rename(dct_rename, axis=1)
 
-    elif out_format.upper() == "PARQUET":
-        pd.DataFrame(dct_updated).to_parquet(output_file, compression="snappy")
+            # Writing for the first time:
+            if mode == 'w':
+                writer, s = utils.write_chunk(dumped, output_file, out_format, mode='w')
+                mode = 'a'
+
+            # Appending:
+            else:
+                writer, s = utils.write_chunk(dumped, output_file, out_format, writer, s, mode='a')
+
+            dumped = []
+
+        if finish: # Last reference id checked
+            break
 
     return 0

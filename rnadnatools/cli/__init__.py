@@ -9,9 +9,30 @@ CONTEXT_SETTINGS = {
 
 @click.version_option(__version__, "-V", "--version")
 @click.group(context_settings=CONTEXT_SETTINGS)
-def cli():
+@click.option("--profile", is_flag=True)
+def cli(profile: bool):
     """Type -h or --help after subcommand."""
-    pass
+
+    # Enable profiling based on:
+    # https://stackoverflow.com/questions/55880601/how-to-use-profiler-with-click-cli-in-python
+    if profile:
+        import cProfile
+        import pstats
+        import io
+        import atexit
+
+        print("Profiling...")
+        pr = cProfile.Profile()
+        pr.enable()
+
+        def exit():
+            pr.disable()
+            print("Profiling completed")
+            s = io.StringIO()
+            pstats.Stats(pr, stream=s).sort_stats("cumulative").print_stats()
+            print(s.getvalue())
+
+        atexit.register(exit)
 
 
 from . import table, segment, genome, read
