@@ -92,7 +92,7 @@ def dump(output_file, in_paths, in_format, out_format, filter, columns): #, chun
                     #     filter_col = np.where(table[filter].to_numpy(zero_copy_only=False))[0]
                     #     isFound = True
                     # else:
-                    filter_col = np.where(table[filter].to_numpy())[0]
+                    filter_col = table[filter] # np.where(table[filter].to_numpy())[0]
                     isFound = True
             # elif in_format.upper() == "HDF5":
             #     if filter in table.keys():
@@ -113,10 +113,11 @@ def dump(output_file, in_paths, in_format, out_format, filter, columns): #, chun
         for i, table in enumerate(input_tables):
             columns_selected = [x for x in columns if x in table.column_names]
             list_available += table.column_names
-            frame = table.select(columns_selected)
-            frame_filtered = frame.take(filter_col) if filter is not None else frame
-            columns_loaded += frame_filtered
-            schema.append(frame.schema)
+            for col in columns_selected:
+                frame = table.select([col])
+                frame_filtered = frame.filter(filter_col) if filter is not None else frame
+                columns_loaded += frame_filtered
+                schema.append(frame.schema)
             list_loaded += columns_selected
 
         if len(list_loaded)!=len(columns):

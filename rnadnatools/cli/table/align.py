@@ -94,7 +94,7 @@ import numpy as np
     '-c',
     "--chunksize",
     help="Chunksize for loading (not supported for HDF5 and PARQUET for now).",
-    default=1_000_000,
+    default=10_000,
     type=int,
     show_default=True,
 )
@@ -102,7 +102,7 @@ import numpy as np
     '-c',
     "--chunksize-writer",
     help="Chunksize for writing.",
-    default=1_000_000,
+    default=100_000,
     type=int,
     show_default=True,
 )
@@ -177,6 +177,7 @@ def align(
     dumped = []
     finish = False # flag for finishing the iteration over reference keys
 
+    print("Start iterations...")
     while True: # iterate over reference keys
 
         if k in keys_loaded: # check loaded keys
