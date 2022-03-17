@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import csv
 
+#### Define specific functions for evaluation:
 import re
 def match(v, expr):
     r = re.compile(expr)
@@ -17,6 +18,31 @@ def match(v, expr):
 
     return matcher(v)
 
+def pick_positions(v1, v2, threshold=99999):
+    """
+    Pick positions of v1 vector that are smaller than threshold (99999 by default),
+    otherwise fill with values from v2 (might be a constant).
+    """
+    result = np.where( (v1<threshold), v1, v2)
+    return result
+
+def pick_smallest(*vectors):
+    """
+    Pick the smallest values for each position of the output vector.
+    vectors are numpy arrays for the same length.
+    """
+    vectors = np.array(vectors)
+    return vectors.min(axis=0)
+
+def pick_largest(*vectors):
+    """
+    Pick the largest values for each position of the output vector.
+    vectors are numpy arrays for the same length.
+    """
+    vectors = np.array(vectors)
+    return vectors.max(axis=0)
+
+#### File management utilities:
 def guess_format(in_path):
     """Guess the file format of in_path."""
 
