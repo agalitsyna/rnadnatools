@@ -61,6 +61,9 @@ def evaluate(column_schema, output_file, in_paths, in_format, out_format):
 
     prohibited_symbols = [":", ".", "-", "/", "!", "?", "&", "|", "'", "%", "@"]
     match = utils.match # define matcher; this now can be used as "match(col, expr)" in the evaluation scheme
+    pick_positions = utils.pick_positions
+    pick_smallest = utils.pick_smallest
+    pick_largest = utils.pick_largest
 
     # Guess format if not specified:
     if in_format.upper() == "AUTO":
